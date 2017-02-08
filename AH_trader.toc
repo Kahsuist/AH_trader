@@ -1,0 +1,10 @@
+## Interface: 70100
+
+## Title: AH_trader
+## Notes: Auction House counselor
+## Author: Khasuist
+## Dependencies:
+AH_trader.lua
+AH_trader.xml
+listID.lua
+ahdata_wowuction.lua
