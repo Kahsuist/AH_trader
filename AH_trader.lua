@@ -87,7 +87,7 @@ function AH_trader_OnUpdate(self)
 			if needQueryForSpeculItem then 
 				local sName, sLink, iRarity, iLevel, iMinLevel, sType, sSubType, iStackCount = GetItemInfo(itemID)
 				if sName then 
-					defineQueryParams()
+					
 					print("1 - making query for ", sName, itemID, iterator_SpeculationItemsList,"currentPage=",currentPage)
 					-- QueryAuctionItems(sName, nil, nil, 0, 0, 0, currentPage)		- мой начальный запрос
 					-- QueryAuctionItems (queryString, minLevel, maxLevel, self.current_page, nil, nil, false, exactMatch, filter )		- аукционатор
@@ -120,6 +120,7 @@ function AH_trader_OnUpdate(self)
 					iterator_AuctionResultsList = 0
 					-- нужен новый список лотов
 					-- если лоты все прочеканы то или прочекать снова или завершить с текущим итемом и начать с новым
+					defineQueryParams()
 					needWorkingQueryForSpeculItem = false
 					needQueryForSpeculItem=true
 				end
@@ -152,8 +153,6 @@ end
 ------------------------------------------------------------- FUNCTIONS -----------------------------------------------------------------------------------
 -----------------------------------------------------------------------------------------------------------------------------------------------------------
 function defineQueryParams(itemID)
-	
-		
 		if true then	-- needWorkingQueryForSpeculItem
 			print("next page .... or next item....")
 			if currentPage then currentPage = currentPage + 1 end
