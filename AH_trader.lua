@@ -70,7 +70,7 @@ end
 function AH_trader_OnUpdate(self)
 	if missFramesAfterOneAction > 2 then missFramesAfterOneAction=missFramesAfterOneAction-1 makeActionInThisFrame=false end
 	if makeActionInThisFrame then
-	
+		local CanISendQuery,_=CanSendAuctionQuery("list")
 		-- ------------------------------------- start main OnUpdate ------------------------------------------
 		
 		if AH_opened and (not interactBuyoutAccepting) then
@@ -79,12 +79,13 @@ function AH_trader_OnUpdate(self)
 				print("0 - init start params for new item...")
 				itemID = listOfItemsForSpeculation[iterator_SpeculationItemsList]
 				iterator_SpeculationItemsList=iterator_SpeculationItemsList+1
-				currentPage = -1
+				currentPage = 0
 				getNewItemID = false
+				ahListUpdated = false
 			end
 			
 			-- запрос на сервер, после этого ждать получение данных
-			if needQueryForSpeculItem then 
+			if needQueryForSpeculItem and CanISendQuery then 
 				local sName, sLink, iRarity, iLevel, iMinLevel, sType, sSubType, iStackCount = GetItemInfo(itemID)
 				if sName then 
 					
@@ -94,8 +95,9 @@ function AH_trader_OnUpdate(self)
 					-- QueryAuctionItems("name", minLevel, maxLevel, page,  isUsable, qualityIndex, getAll, exactMatch, filterData)	- вики
 					-- QueryAuctionItems("", 10, 19, 0, nil, false, false, nil)		- пример
 					-- QueryAuctionItems("name", nil, nil, page, 0, 0, false, false, nil)		- для моего запроса
-					QueryAuctionItems(sName, nil, nil, currentPage, 0, 0, false, false, nil)	
+					QueryAuctionItems(sName, nil, nil, currentPage, 0, 0, false, true, nil)	
 					needQueryForSpeculItem = false
+					ahListUpdated = false
 				end
 			end
 
@@ -109,14 +111,14 @@ function AH_trader_OnUpdate(self)
 				ahListUpdated = false
 			end
 			
-			print("3 - currentPage=",currentPage)
+			--print("3 - currentPage="..currentPage)
 			-- 
 			if needWorkingQueryForSpeculItem then
 				--print("needWorkingQueryFor "..listOfItemsForSpeculation[iterator_SpeculationItemsList] )
 				checkPriceAndBuyLot(iterator_AuctionResultsList)
 				iterator_AuctionResultsList=iterator_AuctionResultsList+1
-				print("3 - iterator_AuctionResultsList "..iterator_AuctionResultsList)
-				if iterator_AuctionResultsList>=numBatchAuctions then 
+				--print("3 - iterator_AuctionResultsList "..iterator_AuctionResultsList)
+				if iterator_AuctionResultsList>numBatchAuctions then 
 					iterator_AuctionResultsList = 0
 					-- нужен новый список лотов
 					-- если лоты все прочеканы то или прочекать снова или завершить с текущим итемом и начать с новым
@@ -174,7 +176,7 @@ end
 function checkPriceAndBuyLot(indexAhResultListID)
 	local name, texture, count, quality, canUse, level, _, minBid, _, buyoutPrice, highestBidder, owner, sold = GetAuctionItemInfo("list", indexAhResultListID)
 	glBuyoutPrice = buyoutPrice	-- эта строчка только для того чтобы перезать цену в StaticPopupDialogs["PURCHASE_ITEM_CONFIRM"]
-	print("buyoutPrice "..buyoutPrice)
+	--print("buyoutPrice "..buyoutPrice)
 	local buyoutPriceForOne = buyoutPrice/count
 	local actualPrice = actualPriceFor(iterator_SpeculationItemsList)
 	--print("PriceForOneItem "..buyoutPrice/count.."\n")
