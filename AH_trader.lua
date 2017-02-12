@@ -3,7 +3,7 @@
 --local frame_counter=0
 --local twoSecondAmountFrames=120
 local missFramesAfterOneAction = 1	-- предназначена для пропуска некоторого количеста фреймов(кадров) после некоторого действия. для разных действий разное время. фактически является паузой. длительность паузы равна (количКадровВСекунду/величЭтойПеременной). нужна для возможности задать в отдельном действии время паузы
-local missFrames = 3	-- задает паузу для missFramesAfterOneAction в общем случае, чтобы процесс не проходил молниеносно, а имел некоторую длительность
+local missFrames = 1	-- задает паузу для missFramesAfterOneAction в общем случае, чтобы процесс не проходил молниеносно, а имел некоторую длительность
 local pauseAfterAhQuery = 5	-- задает паузу запроса на сервер, эта величина попадет так же в missFramesAfterOneAction
 local pauseAfterBuyLot = 9	-- аналогично перем-й выше
 local makeActionInThisFrame=true	-- принимает истину когда истекает пауза, т.е. missFramesAfterOneAction=1
@@ -33,6 +33,7 @@ local getNewItemID = false		-- поднимается когда нужно на
 local ahListUpdated = false		-- поднимается когда получен сигнал о полученной инфе на запрос о предмете в аукцион
 local createAuctionItemslotChanged = false
 local needSellToAhMyItems = false		-- поднимается когда была получена почта и пришло время выставить на аукцион предметы из сумок
+local canSellToAH = false	-- флаг о том что можно выставлять товар на аукцион
 	-- GB --
 local GB_opened = false
 	-- MailBox --
@@ -57,9 +58,9 @@ function AH_trader_Init(self)
 end
 
 function AH_trader_Event(self, event, ...)
-	print("event happened:") 
-	if(event=="AUCTION_HOUSE_SHOW") then 		AH_opened = true  getNewItemID = true	 needQueryForSpeculItem=true		print("AH opened") end
-	if(event=="AUCTION_ITEM_LIST_UPDATE") then 	ahListUpdated = true  		print("AH list updated") end
+	--print("event happened:") 
+	if(event=="AUCTION_HOUSE_SHOW") then 		AH_opened = true  getNewItemID = true	 needQueryForSpeculItem=true		canSellToAH = false		print("AH opened") end
+	if(event=="AUCTION_ITEM_LIST_UPDATE") then 	ahListUpdated = true end	-- print("AH list updated")
 	if(event=="AUCTION_HOUSE_CLOSED") then 		AH_opened = false 	ahListUpdated = false print("AH closed") end
 	if(event=="NEW_AUCTION_UPDATE") then 			createAuctionItemslotChanged = true print("AH put item to trading") end
 	if(event=="GUILDBANKFRAME_OPENED") then 	GB_opened = true 		print("GB opened") end
@@ -68,17 +69,25 @@ function AH_trader_Event(self, event, ...)
 end
 
 function AH_trader_OnUpdate(self)
+	--print("updated..")
 	if missFramesAfterOneAction > 2 then missFramesAfterOneAction=missFramesAfterOneAction-1 makeActionInThisFrame=false end
 	if makeActionInThisFrame then
+		--print("working..")
 		local CanISendQuery,_=CanSendAuctionQuery("list")
 		-- ------------------------------------- start main OnUpdate ------------------------------------------
 		
-		if AH_opened and (not interactBuyoutAccepting) then
+		-- делать закупки на аукционе
+		if AH_opened and (not interactBuyoutAccepting) and (not canSellToAH) then
 			-- получить из списка новый номер итема
 			if getNewItemID then
-				print("0 - init start params for new item...")
+				-- print("0 - init start params for new item...")
 				itemID = listOfItemsForSpeculation[iterator_SpeculationItemsList]
 				iterator_SpeculationItemsList=iterator_SpeculationItemsList+1
+				if iterator_SpeculationItemsList>#listOfItemsForSpeculation then
+					iterator_SpeculationItemsList = 1
+					-- CloseAuctionHouse()
+					canSellToAH = true
+				end
 				currentPage = 0
 				getNewItemID = false
 				ahListUpdated = false
@@ -88,13 +97,7 @@ function AH_trader_OnUpdate(self)
 			if needQueryForSpeculItem and CanISendQuery then 
 				local sName, sLink, iRarity, iLevel, iMinLevel, sType, sSubType, iStackCount = GetItemInfo(itemID)
 				if sName then 
-					
-					print("1 - making query for ", sName, itemID, iterator_SpeculationItemsList,"currentPage=",currentPage)
-					-- QueryAuctionItems(sName, nil, nil, 0, 0, 0, currentPage)		- мой начальный запрос
-					-- QueryAuctionItems (queryString, minLevel, maxLevel, self.current_page, nil, nil, false, exactMatch, filter )		- аукционатор
-					-- QueryAuctionItems("name", minLevel, maxLevel, page,  isUsable, qualityIndex, getAll, exactMatch, filterData)	- вики
-					-- QueryAuctionItems("", 10, 19, 0, nil, false, false, nil)		- пример
-					-- QueryAuctionItems("name", nil, nil, page, 0, 0, false, false, nil)		- для моего запроса
+					-- print("1 - making query for ", sName, itemID, iterator_SpeculationItemsList,"currentPage=",currentPage)
 					QueryAuctionItems(sName, nil, nil, currentPage, 0, 0, false, true, nil)	
 					needQueryForSpeculItem = false
 					ahListUpdated = false
@@ -106,7 +109,7 @@ function AH_trader_OnUpdate(self)
 				numBatchAuctions, totalAuctions = GetNumAuctionItems("list")
 				totalPages = math.ceil(totalAuctions / 50)
 				--currentPage = 0
-				print("2 - num auctions in current list=",numBatchAuctions,"  total auctions=", totalAuctions, "  totalPages=",totalPages)
+				-- print("2 - num auctions in current list=",numBatchAuctions,"  total auctions=", totalAuctions, "  totalPages=",totalPages)
 				needWorkingQueryForSpeculItem = true 
 				ahListUpdated = false
 			end
@@ -132,12 +135,21 @@ function AH_trader_OnUpdate(self)
 			missFrames = pauseAfterAhQuery
 		end
 		
+		-- выставлять товар на аукцион
+		if AH_opened and canSellToAH then
+			canSellToAH = false
+			missFrames = 1000
+			--CloseAuctionHouse()
+		end
+		
 		if GB_opened then
 		
 		end
 		
 		if mailbox_opened then
-		
+			-- запрос на сервер CheckInbox()
+			-- сигнал что данные получены  MAIL_INBOX_UPDATE
+			-- 
 		end
 		
 		if needSellToAhMyItems then
@@ -156,18 +168,13 @@ end
 -----------------------------------------------------------------------------------------------------------------------------------------------------------
 function defineQueryParams(itemID)
 		if true then	-- needWorkingQueryForSpeculItem
-			print("next page .... or next item....")
+			--print("next page .... or next item....")
 			if currentPage then currentPage = currentPage + 1 end
 			if currentPage and (currentPage >= totalPages) then
 				needWorkingQueryForSpeculItem = false
 				getNewItemID = true
 			end
-			print("currentPage=",currentPage,"iterator_SpeculationItemsList=",iterator_SpeculationItemsList)
-			if iterator_SpeculationItemsList>#listOfItemsForSpeculation then
-				iterator_SpeculationItemsList = 1
-				CloseAuctionHouse()
-			end
-			
+			--print("currentPage=",currentPage,"iterator_SpeculationItemsList=",iterator_SpeculationItemsList)
 	--		printWowuctionDbForItemId(itemID)
 		end
 
@@ -178,9 +185,9 @@ function checkPriceAndBuyLot(indexAhResultListID)
 	glBuyoutPrice = buyoutPrice	-- эта строчка только для того чтобы перезать цену в StaticPopupDialogs["PURCHASE_ITEM_CONFIRM"]
 	--print("buyoutPrice "..buyoutPrice)
 	local buyoutPriceForOne = buyoutPrice/count
-	local actualPrice = actualPriceFor(iterator_SpeculationItemsList)
+	local actualPrice = actualPriceFor(itemID)
 	--print("PriceForOneItem "..buyoutPrice/count.."\n")
-	if buyoutPriceForOne<(actualPrice/100) and buyoutPrice>0 then
+	if buyoutPriceForOne<(actualPrice*2/3) and buyoutPrice>0 then
 		print("--->>> buyouting for "..buyoutPriceForOne.." actualPrice "..actualPrice)
 		
 		StaticPopup_Show("PURCHASE_ITEM_CONFIRM",buyoutPrice)	-- купить	, itemToPurchase
@@ -208,15 +215,15 @@ end
      hideOnEscape = true,
  }
 
-function actualPriceFor(iterator)
-	local itemID = listOfItemsForSpeculation[iterator_SpeculationItemsList]
+function actualPriceFor(itemID)
+	--local itemID = listOfItemsForSpeculation[iterator_SpeculationItemsList]
 	--print("itemID in actualPriceFor() "..itemID)
 	-- запрос в таблицу взятую с сайта WOWUction.com
 --	local realmTable=dbWowUction_com["Свежеватель Душ"]
 --	local medianPrice = realmTable.alliance[itemID].medianPrice
 --	local medianPriceErr = realmTable.alliance[itemID].medianPriceErr
-	local realmTable=dbWowUction_com["Дракономор"]
-	local medianPrice = realmTable.alliance[itemID].regionMedianPrice
+	local realmTable=dbWowUction_com["Гордунни"]
+	local medianPrice = realmTable.alliance[itemID].medianPrice
 	--print("medPriceOfItem = ", medianPrice)
 	
 	return medianPrice
@@ -257,7 +264,7 @@ end
 function printWowuctionDbForItemId(itemID)
 	-- TSM.data = {  ["Свежеватель Душ"] = {    lastUpdate = 1462719229,    alliance = {      [25] = {marketValue=0, minBuyout=0, medianPrice=0, marketValueErr=0, medianPriceErr=0, regionMarketValue=61826600, regionMarketValueErr=12123200, regionMedianPrice=55098400, regionMedianPriceErr=12401099, regionAvgDailyQuantity=0.43},
 	--print ("1: ", dbWowUction_com)
-	local realmTable=dbWowUction_com["Свежеватель Душ"]
+	local realmTable=dbWowUction_com["Гордунни"]
 	--print ("2: ", realmTable)
 --	local timeOfGetDB=realmTable["lastUpdate"]
 	--print ("datatime: ", timeOfGetDB)

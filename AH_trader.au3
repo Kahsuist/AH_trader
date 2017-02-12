@@ -38,7 +38,7 @@ EndIf
 GetItemsListAndAhDataFromWOWuction()
 ;start WOW and go
 ;If not WinExists("World of Warcraft") Then StartWowClient()
-Message("StartWowClient complete. Done")
+;Message("StartWowClient complete. Done")
 #cs
 while true
 	If IAm___() Then
@@ -77,9 +77,12 @@ Func GetItemsListAndAhDataFromWOWuction()
 
 	; get AH data from WOWuction.com and put into folder WOWaddons\my addon
 	local $region = "eu" ; load from AHSettings.ini												<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<< !  !  !   !!!  !!!  !!!
-	local $SvejevatelDush = "%D1%81%D0%B2%D0%B5%D0%B6%D0%B5%D0%B2%D0%B0%D1%82%D0%B5%D0%BB%D1%8C-%D0%B4%D1%83%D1%88" ; Свежеватель душ
-	local $Drakonomor = "%D0%B4%D1%80%D0%B0%D0%BA%D0%BE%D0%BD%D0%BE%D0%BC%D0%BE%D1%80"	; Дракономор
-	local $realm = $Drakonomor ; load from AHSettings.ini							<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<< !  !  !   !!!  !!!  !!!
+	local $SvejevatelDush = "%D1%81%D0%B2%D0%B5%D0%B6%D0%B5%D0%B2%D0%B0%D1%82%D0%B5%D0%BB%D1%8C-%D0%B4%D1%83%D1%88" ; свежеватель душ
+	local $Drakonomor = "%D0%B4%D1%80%D0%B0%D0%BA%D0%BE%D0%BD%D0%BE%D0%BC%D0%BE%D1%80"	; дракономор
+	local $Gordunni = "%D0%B3%D0%BE%D1%80%D0%B4%D1%83%D0%BD%D0%BD%D0%B8"	; гордунни
+	local $Cherniyshram = "%D1%87%D0%B5%D1%80%D0%BD%D1%8B%D0%B9+%D1%88%D1%80%D0%B0%D0%BC" ; черный шрам
+	local $realm = $Gordunni ; load from AHSettings.ini							<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<< !  !  !   !!!  !!!  !!!
+	
 	local $EU_WOWuctionDataURL="http://www.wowuction.com/eu/" & $realm & "/horde/Tools/GetTSMDataStatic?dl=true&token=oPsN_5nocV4RmXj5nK56Ig2"
 	local $US_WOWuctionDataURL="http://www.wowuction.com/us/" & $realm & "/horde/Tools/GetTSMDataStatic?dl=true&token=oPsN_5nocV4RmXj5nK56Ig2"
 	if $region == "eu" then $WOWuctionDataURL = $EU_WOWuctionDataURL
